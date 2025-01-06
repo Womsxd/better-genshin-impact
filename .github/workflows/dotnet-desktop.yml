@@ -1,0 +1,99 @@
+name: Build and Package with Manual Trigger
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:  # 手动触发工作流
+    inputs:
+      custom_version:
+        description: 'Optional custom version'
+        required: false
+        default: ''
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    env:
+      Solution_Name: BetterGenshinImpact.sln
+      Configuration: Release
+      Output_Dir: dist/BetterGI
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET Core SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Prepare directories
+      run: |
+        if (Test-Path ${{ env.Output_Dir }}) { Remove-Item -Recurse -Force ${{ env.Output_Dir }} }
+        New-Item -ItemType Directory -Path ${{ env.Output_Dir }}
+
+    - name: Prepare compiler path
+      run: |
+        $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+        $vsPath = (& $vswhere -latest -property installationPath).Trim()
+        $env:Path += ";$vsPath\MSBuild\Current\Bin;$vsPath\Common7\IDE"
+
+    - name: Extract version from project file
+      id: version
+      run: |
+        $projectFile = 'BetterGenshinImpact/BetterGenshinImpact.csproj'
+        $versionPattern = '(?<=<AssemblyVersion>).*?(?=</AssemblyVersion>)'
+        $version = Select-String -Path $projectFile -Pattern $versionPattern | ForEach-Object { $_.Matches[0].Value }
+        if ('${{ github.event.inputs.custom_version }}' -ne '') {
+          $version = '${{ github.event.inputs.custom_version }}'
+        }
+        Write-Host "##[set-output name=version;]$version"
+      shell: pwsh
+
+    - name: Build the application
+      run: dotnet publish BetterGenshinImpact/BetterGenshinImpact.csproj -c ${{ env.Configuration }} -o ${{ env.Output_Dir }} -p:PublishProfile=FolderProfile
+
+    - name: Copy additional files
+      run: |
+        $tmpFolder = "${{ env.Output_Dir }}"
+        $extraFilesDir = "${{ github.workspace }}/ExtraFiles"
+        if (Test-Path $extraFilesDir) {
+          Copy-Item "$extraFilesDir\*" -Destination $tmpFolder -Recurse -Force
+        }
+
+    - name: Package application with 7-Zip
+      run: |
+        $archiveFile = "BetterGI_v${{ steps.version.outputs.version }}.7z"
+        & "MicaSetup.Tools\7-Zip\7z.exe" a $archiveFile "${{ env.Output_Dir }}\*" -t7z -mx=5 -mf=BCJ2 -r -y
+        Move-Item $archiveFile .\MicaSetup\Resources\Setups\
+
+    - name: Build uninstaller
+      run: msbuild MicaSetup/MicaSetup.Uninst.csproj /t:Rebuild /p:Configuration=Release /restore
+
+    - name: Build setup
+      run: |
+        Copy-Item .\MicaSetup\bin\Release\net472\MicaSetup.exe .\MicaSetup\Resources\Setups\Uninst.exe -Force
+        msbuild MicaSetup/MicaSetup.csproj /t:Build /p:Configuration=Release /restore
+        Move-Item .\MicaSetup\bin\Release\net472\MicaSetup.exe .\
+        Rename-Item MicaSetup.exe "BetterGI_Setup_v${{ steps.version.outputs.version }}.exe"
+
+    - name: Upload 7z package
+      uses: actions/upload-artifact@v3
+      with:
+        name: BetterGI_7z_Package
+        path: ./MicaSetup/Resources/Setups/BetterGI_v${{ steps.version.outputs.version }}.7z
+
+    - name: Upload exe package
+      uses: actions/upload-artifact@v3
+      with:
+        name: BetterGI_Setup_Exe
+        path: ./BetterGI_Setup_v${{ steps.version.outputs.version }}.exe
+
+    - name: Cleanup
+      run: Remove-Item -Recurse -Force dist/BetterGI
