@@ -73,7 +73,6 @@ jobs:
         $sevenZipPath = "${{ github.workspace }}\Build\MicaSetup.Tools\7-Zip\7z.exe"
         $outputDir = "${{ github.workspace }}\dist\BetterGI"
         & $sevenZipPath a $archiveFile "$outputDir\*" -t7z -mx=5 -mf=BCJ2 -r -y
-        # 将打包好的7z文件移动到目标文件夹
         Move-Item $archiveFile "${{ github.workspace }}\Build\MicaSetup\Resources\Setups\"
 
     - name: Build uninstaller
@@ -81,23 +80,20 @@ jobs:
 
     - name: Build setup
       run: |
-        # 复制卸载程序
         Copy-Item "${{ github.workspace }}\Build\MicaSetup\bin\Release\net472\MicaSetup.exe" "${{ github.workspace }}\Build\MicaSetup\Resources\Setups\Uninst.exe" -Force
-        # 构建安装程序
         msbuild "${{ github.workspace }}\Build\MicaSetup\MicaSetup.csproj" /t:Build /p:Configuration=Release /restore
-        # 重命名安装程序
         Move-Item "${{ github.workspace }}\Build\MicaSetup\bin\Release\net472\MicaSetup.exe" "${{ github.workspace }}\Build\BetterGI_Setup_v${{ steps.version.outputs.version }}.exe"
 
     - name: Upload 7z package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: BetterGI_7z_Package
+        name: BetterGI_v${{ steps.version.outputs.version }}.7z
         path: "${{ github.workspace }}\\Build\\MicaSetup\\Resources\\Setups\\BetterGI_v${{ steps.version.outputs.version }}.7z"
 
     - name: Upload exe package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: BetterGI_Setup_Exe
+        name: BetterGI_Setup_v${{ steps.version.outputs.version }}.exe
         path: "${{ github.workspace }}\\Build\\BetterGI_Setup_v${{ steps.version.outputs.version }}.exe"
 
     - name: Cleanup
