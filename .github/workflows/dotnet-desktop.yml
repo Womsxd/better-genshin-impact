@@ -71,7 +71,7 @@ jobs:
       run: |
         $archiveFile = "BetterGI_v${{ steps.version.outputs.version }}.7z"
         $sevenZipPath = "${{ github.workspace }}\Build\MicaSetup.Tools\7-Zip\7z.exe"
-        $outputDir = "${{ github.workspace }}\Build\dist\BetterGI"
+        $outputDir = "${{ github.workspace }}\dist\BetterGI"
         & $sevenZipPath a $archiveFile "$outputDir\*" -t7z -mx=5 -mf=BCJ2 -r -y
         # 将打包好的7z文件移动到目标文件夹
         Move-Item $archiveFile "${{ github.workspace }}\Build\MicaSetup\Resources\Setups\"
