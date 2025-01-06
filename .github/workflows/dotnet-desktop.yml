@@ -70,7 +70,8 @@ jobs:
     - name: Package application with 7-Zip
       run: |
         $archiveFile = "BetterGI_v${{ steps.version.outputs.version }}.7z"
-        & "MicaSetup.Tools\7-Zip\7z.exe" a $archiveFile "${{ env.Output_Dir }}\*" -t7z -mx=5 -mf=BCJ2 -r -y
+        $sevenZipPath = "${{ github.workspace }}\MicaSetup.Tools\7-Zip\7z.exe"
+        & $sevenZipPath a $archiveFile "${{ env.Output_Dir }}\*" -t7z -mx=5 -mf=BCJ2 -r -y
         Move-Item $archiveFile .\MicaSetup\Resources\Setups\
 
     - name: Build uninstaller
