@@ -70,31 +70,35 @@ jobs:
     - name: Package application with 7-Zip
       run: |
         $archiveFile = "BetterGI_v${{ steps.version.outputs.version }}.7z"
-        $sevenZipPath = "${{ github.workspace }}\MicaSetup.Tools\7-Zip\7z.exe"
-        & $sevenZipPath a $archiveFile "${{ env.Output_Dir }}\*" -t7z -mx=5 -mf=BCJ2 -r -y
-        Move-Item $archiveFile .\MicaSetup\Resources\Setups\
+        $sevenZipPath = "${{ github.workspace }}\Build\MicaSetup.Tools\7-Zip\7z.exe"
+        $outputDir = "${{ github.workspace }}\Build\dist\BetterGI"
+        & $sevenZipPath a $archiveFile "$outputDir\*" -t7z -mx=5 -mf=BCJ2 -r -y
+        # 将打包好的7z文件移动到目标文件夹
+        Move-Item $archiveFile "${{ github.workspace }}\Build\MicaSetup\Resources\Setups\"
 
     - name: Build uninstaller
-      run: msbuild MicaSetup/MicaSetup.Uninst.csproj /t:Rebuild /p:Configuration=Release /restore
+      run: msbuild "${{ github.workspace }}\Build\MicaSetup\MicaSetup.Uninst.csproj" /t:Rebuild /p:Configuration=Release /restore
 
     - name: Build setup
       run: |
-        Copy-Item .\MicaSetup\bin\Release\net472\MicaSetup.exe .\MicaSetup\Resources\Setups\Uninst.exe -Force
-        msbuild MicaSetup/MicaSetup.csproj /t:Build /p:Configuration=Release /restore
-        Move-Item .\MicaSetup\bin\Release\net472\MicaSetup.exe .\
-        Rename-Item MicaSetup.exe "BetterGI_Setup_v${{ steps.version.outputs.version }}.exe"
+        # 复制卸载程序
+        Copy-Item "${{ github.workspace }}\Build\MicaSetup\bin\Release\net472\MicaSetup.exe" "${{ github.workspace }}\Build\MicaSetup\Resources\Setups\Uninst.exe" -Force
+        # 构建安装程序
+        msbuild "${{ github.workspace }}\Build\MicaSetup\MicaSetup.csproj" /t:Build /p:Configuration=Release /restore
+        # 重命名安装程序
+        Move-Item "${{ github.workspace }}\Build\MicaSetup\bin\Release\net472\MicaSetup.exe" "${{ github.workspace }}\Build\BetterGI_Setup_v${{ steps.version.outputs.version }}.exe"
 
     - name: Upload 7z package
       uses: actions/upload-artifact@v3
       with:
         name: BetterGI_7z_Package
-        path: ./MicaSetup/Resources/Setups/BetterGI_v${{ steps.version.outputs.version }}.7z
+        path: "${{ github.workspace }}\\Build\\MicaSetup\\Resources\\Setups\\BetterGI_v${{ steps.version.outputs.version }}.7z"
 
     - name: Upload exe package
       uses: actions/upload-artifact@v3
       with:
         name: BetterGI_Setup_Exe
-        path: ./BetterGI_Setup_v${{ steps.version.outputs.version }}.exe
+        path: "${{ github.workspace }}\\Build\\BetterGI_Setup_v${{ steps.version.outputs.version }}.exe"
 
     - name: Cleanup
       run: Remove-Item -Recurse -Force dist/BetterGI
