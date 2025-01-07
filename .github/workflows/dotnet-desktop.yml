@@ -72,9 +72,8 @@ jobs:
         $archiveFile = "BetterGI_v${{ steps.version.outputs.version }}.7z"
         $sevenZipPath = "${{ github.workspace }}\Build\MicaSetup.Tools\7-Zip\7z.exe"
         $outputDir = "${{ github.workspace }}\dist\BetterGI"
-        & $sevenZipPath a publish.7z "$outputDir\*" -t7z -mx=5 -mf=BCJ2 -r -y
-        Move-Item publish.7z "${{ github.workspace }}\Build\MicaSetup\Resources\Setups\"
-        Move-Item publish.7z $archiveFile
+        & $sevenZipPath a $archiveFile "$outputDir\*" -t7z -mx=5 -mf=BCJ2 -r -y
+        Copy-Item $archiveFile "${{ github.workspace }}\Build\MicaSetup\Resources\Setups\publish.7z"
 
     - name: Build uninstaller
       run: msbuild "${{ github.workspace }}\Build\MicaSetup\MicaSetup.Uninst.csproj" /t:Rebuild /p:Configuration=Release /restore
