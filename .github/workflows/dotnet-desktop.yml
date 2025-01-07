@@ -72,8 +72,9 @@ jobs:
         $archiveFile = "BetterGI_v${{ steps.version.outputs.version }}.7z"
         $sevenZipPath = "${{ github.workspace }}\Build\MicaSetup.Tools\7-Zip\7z.exe"
         $outputDir = "${{ github.workspace }}\dist\BetterGI"
-        & $sevenZipPath a $archiveFile "$outputDir\*" -t7z -mx=5 -mf=BCJ2 -r -y
-        Move-Item $archiveFile "${{ github.workspace }}\Build\MicaSetup\Resources\Setups\"
+        & $sevenZipPath a publish.7z "$outputDir\*" -t7z -mx=5 -mf=BCJ2 -r -y
+        Move-Item publish.7z "${{ github.workspace }}\Build\MicaSetup\Resources\Setups\"
+        Move-Item publish.7z $archiveFile
 
     - name: Build uninstaller
       run: msbuild "${{ github.workspace }}\Build\MicaSetup\MicaSetup.Uninst.csproj" /t:Rebuild /p:Configuration=Release /restore
@@ -88,7 +89,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: BetterGI_v${{ steps.version.outputs.version }}.7z
-        path: "${{ github.workspace }}\\Build\\MicaSetup\\Resources\\Setups\\BetterGI_v${{ steps.version.outputs.version }}.7z"
+        path: "BetterGI_v${{ steps.version.outputs.version }}.7z"
 
     - name: Upload exe package
       uses: actions/upload-artifact@v4
